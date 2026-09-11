@@ -1,21 +1,61 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# ServeFlow
 
-# Run and deploy your AI Studio app
+> High-fidelity Mobile Restaurant POS & Operations Management System for single-restaurant dining, takeaway, kitchen tickets, billing, and payment verification.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/23cdb1ee-8808-4e71-b305-5cac29499167
+## Overview
 
-## Run Locally
+**ServeFlow** streamlines daily restaurant floor operations, ordering, and billing workflows into an intuitive interface designed for speed and clarity.
 
-**Prerequisites:**  Node.js
+### Key Features
+- **Table & Dining Management:** Live overview of tables, active occupancy, and orders.
+- **Order Creation & Customization:** Quick item selection, modifications, and order dispatch.
+- **Kitchen Display System (KDS):** Real-time ticket routing for seamless kitchen coordination.
+- **Billing & Payment Collection:** Multiple payment method handling, split bills, and verification.
+- **Insights & Performance:** Daily revenue summaries, top items, and operational metrics.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-# serverflow
+## Tech Stack
+
+- **Frontend:** React 19, TypeScript, Vite
+- **Styling:** Tailwind CSS
+- **Icons & Animation:** Lucide Icons, Motion, Canvas Confetti
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher recommended)
+- npm or bun
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ms-lokesh/serverflow.git
+   cd serverflow
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure environment variables:
+   Copy `.env.example` to `.env.local` and configure any necessary keys:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Build for production:
+   ```bash
+   npm run build
+   ```

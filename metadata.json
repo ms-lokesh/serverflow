@@ -1,0 +1,6 @@
+{
+  "name": "ServeFlow",
+  "description": "High-fidelity Mobile Restaurant POS & Operations Management System for single-restaurant dining, takeaway, kitchen tickets, billing, and payment verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
