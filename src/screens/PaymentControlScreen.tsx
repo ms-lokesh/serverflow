@@ -172,13 +172,13 @@ export const PaymentControlScreen: React.FC<PaymentControlScreenProps> = ({
             </p>
           </div>
         ) : (
-          filteredOrders.map((ord) => {
+          filteredOrders.map((ord, idx) => {
             const pay = ord.payment;
             const isTarget = selectedOrderForReview?.id === ord.id;
 
             return (
               <div
-                key={ord.id}
+                key={`${ord.id}-${idx}`}
                 id={`verify-card-${ord.id}`}
                 className={`bg-white rounded-3xl p-4 border shadow-sm space-y-3 transition-all ${
                   isTarget ? 'border-[#C94B4B] ring-2 ring-[#C94B4B]/30' : 'border-[#E8E6E3]'

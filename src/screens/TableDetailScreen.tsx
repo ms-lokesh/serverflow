@@ -15,7 +15,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
-import { Order, Table } from '../types';
+import { Order, Table, TimelineEvent } from '../types';
 
 interface TableDetailScreenProps {
   table: Table;
@@ -34,9 +34,11 @@ export const TableDetailScreen: React.FC<TableDetailScreenProps> = ({
   onCollectPayment,
   onReviewPayment,
 }) => {
-  const { getOrderById, currentUser, printReceipt } = useRestaurant();
+  const { getOrderById, currentUser, printReceipt, tables, kitchenTickets } = useRestaurant();
 
-  const order = table.currentOrderId ? getOrderById(table.currentOrderId) : undefined;
+  const liveTable = tables.find((t) => t.number === table.number) || table;
+  const order = liveTable.currentOrderId ? getOrderById(liveTable.currentOrderId) : undefined;
+  const ticket = kitchenTickets.find((k) => k.orderId === order?.id);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -44,10 +46,13 @@ export const TableDetailScreen: React.FC<TableDetailScreenProps> = ({
         return { label: 'Available', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
       case 'occupied':
       case 'sent_to_kitchen':
+        return { label: 'Sent to Kitchen', color: 'bg-amber-50 text-amber-900 border-amber-300 font-bold' };
       case 'preparing':
+        return { label: 'In Kitchen / Cooking', color: 'bg-orange-50 text-orange-900 border-orange-300 font-bold' };
       case 'ready':
+        return { label: 'Food Ready to Serve', color: 'bg-blue-50 text-blue-900 border-blue-300 font-bold' };
       case 'served':
-        return { label: 'Occupied', color: 'bg-blue-50 text-blue-800 border-blue-200' };
+        return { label: 'Food Served', color: 'bg-emerald-50 text-emerald-900 border-emerald-300 font-bold' };
       case 'bill_requested':
         return { label: 'Bill Requested', color: 'bg-amber-50 text-amber-900 border-amber-300 font-bold' };
       case 'payment_submitted':
@@ -60,6 +65,85 @@ export const TableDetailScreen: React.FC<TableDetailScreenProps> = ({
       default:
         return { label: status, color: 'bg-gray-50 text-gray-800 border-gray-200' };
     }
+  };
+
+  const formatActivityTime = (iso?: string) => {
+    if (!iso) return undefined;
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return iso;
+    }
+  };
+
+  const getOrderTimeline = (ord: Order): TimelineEvent[] => {
+    const stages = [
+      { title: 'Order Created', key: 'created' },
+      { title: 'Sent to Kitchen', key: 'sent_to_kitchen' },
+      { title: 'Preparing in Kitchen', key: 'preparing' },
+      { title: 'Food Ready', key: 'ready' },
+      { title: 'Food Served', key: 'served' },
+      { title: 'Bill Requested', key: 'bill_requested' },
+      { title: 'Payment Submitted', key: 'payment_submitted' },
+      { title: 'Payment Verified & Closed', key: 'closed' },
+    ];
+
+    const statusOrder: Record<string, number> = {
+      created: 0,
+      sent_to_kitchen: 1,
+      preparing: 2,
+      ready: 3,
+      served: 4,
+      bill_requested: 5,
+      payment_submitted: 6,
+      payment_verified: 7,
+      closed: 7,
+    };
+
+    const currentIdx = statusOrder[ord.status] ?? 0;
+
+    return stages.map((stage, idx) => {
+      const isPast = idx < currentIdx;
+      const isCurrent = idx === currentIdx;
+      const isClosed = ord.status === 'closed' || ord.status === 'payment_verified';
+
+      let time = 'Pending';
+      if (idx === 0) {
+        time = formatActivityTime(ord.createdAt) || 'Done';
+      } else if (idx === 1) {
+        time = formatActivityTime(ticket?.createdAt) || (isPast || isCurrent ? 'Sent' : 'Pending');
+      } else if (idx === 2) {
+        time = formatActivityTime(ticket?.acceptedAt) || (isPast || (isCurrent && isClosed) ? 'Done' : isCurrent ? 'Cooking' : 'Pending');
+      } else if (idx === 3) {
+        time = formatActivityTime(ticket?.readyAt) || (isPast || (isCurrent && isClosed) ? 'Done' : isCurrent ? 'Ready' : 'Pending');
+      } else if (idx === 4) {
+        time = formatActivityTime(ticket?.servedAt) || (isPast || (isCurrent && isClosed) ? 'Served' : isCurrent ? 'Serving' : 'Pending');
+      } else if (idx === 5) {
+        time = isPast || (isCurrent && isClosed) ? 'Billed' : isCurrent ? 'Requested' : 'Pending';
+      } else if (idx === 6) {
+        time = formatActivityTime(ord.payment?.submittedAt) || (isPast || (isCurrent && isClosed) ? 'Submitted' : isCurrent ? 'Pending Verification' : 'Pending');
+      } else if (idx === 7) {
+        time = formatActivityTime(ord.payment?.verifiedAt) || (isClosed ? 'Settled' : 'Pending');
+      }
+
+      return {
+        id: `timeline-${stage.key}-${idx}`,
+        title: stage.title,
+        time,
+        completed: isPast || (isCurrent && isClosed),
+        current: isCurrent && !isClosed,
+        subtitle:
+          isCurrent && ord.status === 'payment_submitted'
+            ? 'Waiting for Admin Verification'
+            : isCurrent && ord.status === 'ready'
+            ? 'Ready for Waiter to pick up'
+            : isCurrent && ord.status === 'served'
+            ? 'Customer enjoying food'
+            : undefined,
+      };
+    });
   };
 
   const statusBadge = getStatusBadge(order?.status || table.status);
@@ -326,7 +410,7 @@ export const TableDetailScreen: React.FC<TableDetailScreenProps> = ({
                 {/* Vertical timeline line */}
                 <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-[#E8E6E3]" />
 
-                {order.timeline.map((event, idx) => {
+                {getOrderTimeline(order).map((event, idx) => {
                   const isDone = event.completed;
                   const isCurrent = event.current;
 

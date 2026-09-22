@@ -1,151 +1,150 @@
 import React, { useState } from 'react';
-import { Flame, ShieldCheck, UtensilsCrossed, ChefHat, ShoppingBag, ArrowRight } from 'lucide-react';
-import { useRestaurant } from '../context/RestaurantContext';
-import { Role } from '../types';
+import { Flame, ArrowRight, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const LoginScreen: React.FC = () => {
-  const { login } = useRestaurant();
-  const [username, setUsername] = useState('Admin');
-  const [password, setPassword] = useState('••••••••');
-  const [selectedRole, setSelectedRole] = useState<Role>('admin');
+  const { login, error, clearError } = useAuth();
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const demoRoles: { role: Role; name: string; label: string; icon: any; color: string }[] = [
-    {
-      role: 'admin',
-      name: 'Admin',
-      label: 'Admin',
-      icon: ShieldCheck,
-      color: 'bg-[#FCE8E8] text-[#A83B3B] border-[#F4B4B4]',
-    },
-    {
-      role: 'dining',
-      name: 'Arun',
-      label: 'Dining Staff',
-      icon: UtensilsCrossed,
-      color: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    },
-    {
-      role: 'kitchen',
-      name: 'Suresh',
-      label: 'Kitchen Staff',
-      icon: ChefHat,
-      color: 'bg-amber-50 text-amber-800 border-amber-200',
-    },
-    {
-      role: 'takeaway',
-      name: 'Manoj',
-      label: 'Takeaway Staff',
-      icon: ShoppingBag,
-      color: 'bg-blue-50 text-blue-800 border-blue-200',
-    },
-  ];
-
-  const handleSelectRole = (r: (typeof demoRoles)[0]) => {
-    setSelectedRole(r.role);
-    setUsername(r.name);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(username, selectedRole);
+    if (!identifier.trim() || !password) return;
+
+    setIsSubmitting(true);
+    setLocalError(null);
+    clearError();
+
+    const result = await login(identifier.trim(), password);
+    setIsSubmitting(false);
+
+    if (!result.success && result.error) {
+      setLocalError(result.error);
+    }
   };
+
+  const displayError = localError || error;
 
   return (
-    <div className="min-h-screen bg-[#F8F8F6] flex flex-col justify-between p-5 max-w-md mx-auto">
+    <div className="min-h-screen bg-[#F8F8F6] flex flex-col justify-between p-5 max-w-md mx-auto selection:bg-[#C94B4B]/20 selection:text-[#C94B4B]">
       {/* Brand Header */}
-      <div className="pt-8 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-[#C94B4B] flex items-center justify-center text-white mx-auto mb-3 shadow-md shadow-[#C94B4B]/30">
+      <div className="pt-10 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[#C94B4B] flex items-center justify-center text-white mx-auto mb-3.5 shadow-lg shadow-[#C94B4B]/25">
           <Flame className="w-9 h-9 fill-white text-white" />
         </div>
-        <h1 className="text-[26px] font-extrabold text-[#242424] tracking-tight">ServeFlow</h1>
-        <p className="text-[14px] text-[#737373] mt-1 font-medium">Restaurant POS & Operations</p>
-        <div className="inline-block mt-2 px-3 py-1 bg-white border border-[#E8E6E3] rounded-full text-[11px] font-semibold text-[#555]">
-          Spice House Restaurant
-        </div>
+        <h1 className="text-[28px] font-extrabold text-[#242424] tracking-tight">ServeFlow</h1>
+        <p className="text-[14px] text-[#737373] mt-1 font-semibold">Restaurant POS & Operations</p>
+        <p className="text-[12px] text-[#999] mt-0.5">Manage orders • Kitchen • Payments • Reports</p>
       </div>
 
-      {/* Form Card */}
+      {/* Main Login Card */}
       <div className="my-auto py-6">
-        <div className="bg-white rounded-3xl p-5 border border-[#E8E6E3] shadow-sm">
+        <div className="bg-white rounded-3xl p-6 border border-[#E8E6E3] shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Error Notification Alert */}
+            {displayError && (
+              <div
+                className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-[13px] font-semibold flex items-start gap-2.5 animate-in fade-in duration-200"
+                role="alert"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                <div className="leading-snug">{displayError}</div>
+              </div>
+            )}
+
             <div>
-              <label className="block text-[12px] font-bold text-[#555] uppercase tracking-wider mb-1.5">
-                Username
+              <label
+                htmlFor="login-identifier"
+                className="block text-[11.5px] font-extrabold text-[#555] uppercase tracking-wider mb-1.5"
+              >
+                Employee ID / Email
               </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full px-3.5 py-3 rounded-xl border border-[#E8E6E3] bg-[#F8F8F6] text-[#242424] text-[14px] font-semibold focus:outline-none focus:border-[#C94B4B] focus:bg-white transition-all"
-                placeholder="Enter username"
-              />
+              <div className="relative">
+                <input
+                  id="login-identifier"
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    if (displayError) setLocalError(null);
+                  }}
+                  required
+                  autoFocus
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  disabled={isSubmitting}
+                  className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-[#E8E6E3] bg-[#F8F8F6] text-[#242424] text-[14px] font-semibold placeholder:text-[#AAA] focus:outline-none focus:border-[#C94B4B] focus:bg-white transition-all disabled:opacity-60"
+                  placeholder="e.g. ADM-001 or DIN-001"
+                />
+                <User className="w-4 h-4 text-[#888] absolute left-3.5 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
             <div>
-              <label className="block text-[12px] font-bold text-[#555] uppercase tracking-wider mb-1.5">
+              <label
+                htmlFor="login-password"
+                className="block text-[11.5px] font-extrabold text-[#555] uppercase tracking-wider mb-1.5"
+              >
                 Password
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-3.5 py-3 rounded-xl border border-[#E8E6E3] bg-[#F8F8F6] text-[#242424] text-[14px] font-semibold focus:outline-none focus:border-[#C94B4B] focus:bg-white transition-all"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="login-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (displayError) setLocalError(null);
+                  }}
+                  required
+                  disabled={isSubmitting}
+                  className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-[#E8E6E3] bg-[#F8F8F6] text-[#242424] text-[14px] font-semibold placeholder:text-[#AAA] focus:outline-none focus:border-[#C94B4B] focus:bg-white transition-all disabled:opacity-60"
+                  placeholder="••••••••"
+                />
+                <Lock className="w-4 h-4 text-[#888] absolute left-3.5 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
             <button
               type="submit"
               id="btn-login-submit"
-              className="w-full py-3.5 px-4 rounded-xl bg-[#C94B4B] text-white font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#A83B3B] active:scale-98 transition-all shadow-md shadow-[#C94B4B]/30 min-h-[48px]"
+              disabled={isSubmitting || !identifier.trim() || !password}
+              className="w-full py-3.5 px-4 rounded-xl bg-[#C94B4B] text-white font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#A83B3B] active:scale-98 transition-all shadow-md shadow-[#C94B4B]/25 min-h-[48px] disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
             >
-              <span>Sign In</span>
-              <ArrowRight className="w-4 h-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                  <span>Logging in...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
-          {/* Role Selection for Demo */}
-          <div className="mt-6 pt-5 border-t border-[#E8E6E3]">
-            <p className="text-[11.5px] font-bold text-[#737373] text-center uppercase tracking-wider mb-3">
-              Prototype Demo Quick Roles
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {demoRoles.map((r) => {
-                const Icon = r.icon;
-                const isSelected = selectedRole === r.role && username === r.name;
-                return (
-                  <button
-                    key={r.role + r.name}
-                    type="button"
-                    onClick={() => handleSelectRole(r)}
-                    className={`flex items-center gap-2.5 p-2.5 rounded-2xl border text-left transition-all active:scale-95 ${
-                      isSelected
-                        ? `${r.color} ring-2 ring-[#C94B4B]/40 font-bold`
-                        : 'bg-[#F8F8F6] border-[#E8E6E3] text-[#555] hover:bg-white'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-xs border border-inherit">
-                      <Icon className="w-4 h-4 text-current" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold truncate leading-tight text-[#242424]">
-                        {r.name}
-                      </div>
-                      <div className="text-[10px] text-[#737373] truncate">{r.label}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Forgot password */}
+          <div className="mt-5 text-center pt-3 border-t border-[#F5F5F3]">
+            <button
+              type="button"
+              onClick={() =>
+                alert('Please contact your restaurant administrator or manager to reset your password.')
+              }
+              className="text-[12.5px] font-semibold text-[#737373] hover:text-[#C94B4B] transition-colors"
+            >
+              Forgot password?
+            </button>
           </div>
         </div>
       </div>
 
       {/* Footer Info */}
-      <div className="text-center pb-4 text-[11px] text-[#888]">
-        ServeFlow Mobile POS • v2.4 Single Restaurant Edition
+      <div className="text-center pb-4 text-[11.5px] text-[#888]">
+        ServeFlow POS • Single Restaurant Edition
       </div>
     </div>
   );

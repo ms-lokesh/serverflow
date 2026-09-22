@@ -135,7 +135,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <TrendingUp className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="text-[20px] sm:text-[24px] font-extrabold text-[#242424] tracking-tight">
-              ₹{summary.todaySales.toLocaleString('en-IN')}
+              ₹{(summary?.todaySales ?? 0).toLocaleString('en-IN')}
             </div>
             <div className="text-[10px] text-emerald-700 font-semibold mt-1 flex items-center gap-0.5">
               <ArrowUpRight className="w-3 h-3" /> +14.2% vs yesterday
@@ -169,7 +169,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <AlertCircle className="w-4 h-4 text-amber-600" />
             </div>
             <div className="text-[20px] sm:text-[24px] font-extrabold text-amber-900 tracking-tight">
-              ₹{summary.pendingPayments.toLocaleString('en-IN')}
+              ₹{(summary?.pendingPayments ?? 0).toLocaleString('en-IN')}
             </div>
             <div className="text-[10px] text-amber-700 font-bold mt-1">
               {pendingOrders.length} unverified
@@ -268,15 +268,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="grid grid-cols-3 gap-2 mt-3 pt-1 text-center">
               <div className="p-2 rounded-xl bg-[#F8F8F6]">
                 <span className="text-[10px] text-[#737373] block">Dining</span>
-                <strong className="text-[12.5px] text-[#242424]">₹{summary.diningSales.toLocaleString()}</strong>
+                <strong className="text-[12.5px] text-[#242424]">₹{(summary?.diningSales ?? 0).toLocaleString()}</strong>
               </div>
               <div className="p-2 rounded-xl bg-[#F8F8F6]">
                 <span className="text-[10px] text-[#737373] block">Takeaway</span>
-                <strong className="text-[12.5px] text-[#242424]">₹{summary.takeawaySales.toLocaleString()}</strong>
+                <strong className="text-[12.5px] text-[#242424]">₹{(summary?.takeawaySales ?? 0).toLocaleString()}</strong>
               </div>
               <div className="p-2 rounded-xl bg-[#F8F8F6]">
                 <span className="text-[10px] text-[#737373] block">GST Total</span>
-                <strong className="text-[12.5px] text-[#242424]">₹{summary.totalGst.toLocaleString()}</strong>
+                <strong className="text-[12.5px] text-[#242424]">₹{(summary?.totalGst ?? 0).toLocaleString()}</strong>
               </div>
             </div>
           </div>

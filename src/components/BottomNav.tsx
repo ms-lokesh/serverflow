@@ -2,18 +2,15 @@ import React from 'react';
 import {
   LayoutGrid,
   ClipboardList,
-  Receipt,
   CircleDollarSign,
   MoreHorizontal,
   Home,
   ChefHat,
   CookingPot,
-  CheckCircle2,
-  PackageCheck,
   ShoppingBag,
-  PlusCircle,
 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
+import { useAuth } from '../context/AuthContext';
 
 interface BottomNavProps {
   activeTab: string;
@@ -26,7 +23,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onSelectTab,
   onTabChange,
 }) => {
-  const { currentUser, orders, kitchenTickets, tables } = useRestaurant();
+  const { orders, kitchenTickets, tables } = useRestaurant();
+  const { role } = useAuth();
 
   const handleTabSelect = (tabId: string) => {
     if (onSelectTab) onSelectTab(tabId);
@@ -39,9 +37,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   ).length;
 
   const kitchenNewCount = kitchenTickets.filter((k) => k.status === 'new').length;
-  const kitchenPrepCount = kitchenTickets.filter((k) => k.status === 'preparing').length;
-  const kitchenReadyCount = kitchenTickets.filter((k) => k.status === 'ready').length;
-
   const billRequestedCount = tables.filter((t) => t.status === 'bill_requested').length;
   const takeawayReadyCount = orders.filter(
     (o) => o.orderType === 'takeaway' && (o.status === 'ready' || o.status === 'preparing')
@@ -49,7 +44,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   // Nav configurations per role
   const getNavItems = () => {
-    switch (currentUser.role) {
+    switch (role) {
       case 'admin':
         return [
           { id: 'home', label: 'Dashboard', icon: Home },
@@ -80,7 +75,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             icon: ChefHat,
             badge: kitchenNewCount > 0 ? kitchenNewCount : undefined,
           },
-          { id: 'menu', label: '86 Stock', icon: CookingPot },
+          { id: 'menu', label: 'Menu', icon: CookingPot },
           { id: 'profile', label: 'Staff', icon: MoreHorizontal },
         ];
 
@@ -94,6 +89,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             badge: takeawayReadyCount > 0 ? takeawayReadyCount : undefined,
           },
           { id: 'profile', label: 'Staff', icon: MoreHorizontal },
+        ];
+
+      default:
+        return [
+          { id: 'tables', label: 'Tables', icon: LayoutGrid },
+          { id: 'orders', label: 'Orders', icon: ClipboardList },
         ];
     }
   };

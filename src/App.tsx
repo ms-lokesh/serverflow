@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { RestaurantProvider, useRestaurant } from './context/RestaurantContext';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -27,9 +28,30 @@ import { NotificationsModal } from './screens/NotificationsModal';
 import { ProfileScreen } from './screens/ProfileScreen';
 
 import { Table, Order } from './types';
+import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
+
+const AccessDeniedView: React.FC<{ onGoBack: () => void }> = ({ onGoBack }) => (
+  <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+    <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mb-4 shadow-sm">
+      <ShieldAlert className="w-8 h-8" />
+    </div>
+    <h2 className="text-[20px] font-extrabold text-[#242424]">Access Denied</h2>
+    <p className="text-[13px] text-[#737373] mt-1.5 max-w-sm">
+      You do not have the required role permissions to access this management area.
+    </p>
+    <button
+      onClick={onGoBack}
+      className="mt-6 py-2.5 px-5 rounded-xl bg-[#242424] text-white font-bold text-[13px] flex items-center gap-2 hover:bg-black transition-all active:scale-95"
+    >
+      <ArrowLeft className="w-4 h-4" />
+      <span>Return to Your Dashboard</span>
+    </button>
+  </div>
+);
 
 const MainApp: React.FC = () => {
-  const { isLoggedIn, currentUser, getOrderById, tables, orders } = useRestaurant();
+  const { isAuthenticated, isLoading, role } = useAuth();
+  const { tables } = useRestaurant();
 
   // Screen navigation state
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -42,8 +64,25 @@ const MainApp: React.FC = () => {
   const [isViewingClosing, setIsViewingClosing] = useState<boolean>(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
 
-  // If not logged in, show Login
-  if (!isLoggedIn) {
+  // Set default persona tab upon authentication
+  useEffect(() => {
+    if (role === 'admin') setActiveTab('home');
+    else if (role === 'dining') setActiveTab('tables');
+    else if (role === 'kitchen') setActiveTab('kitchen');
+    else if (role === 'takeaway') setActiveTab('takeaway');
+  }, [role]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8F8F6] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-[#C94B4B]" />
+        <span className="text-[13px] font-bold text-[#737373]">Connecting to ServeFlow...</span>
+      </div>
+    );
+  }
+
+  // If not logged in, show unified LoginScreen
+  if (!isAuthenticated) {
     return <LoginScreen />;
   }
 
@@ -57,9 +96,8 @@ const MainApp: React.FC = () => {
     setIsCreatingOrder(true);
   };
 
-  const handleOrderCreated = (orderId: string) => {
+  const handleOrderCreated = () => {
     setIsCreatingOrder(false);
-    // Find updated table
     const tableNum = selectedTable?.number;
     const updatedTable = tables.find((t) => t.number === tableNum) || selectedTable;
     setSelectedTable(updatedTable || null);
@@ -105,7 +143,6 @@ const MainApp: React.FC = () => {
         return;
       }
     }
-    // Else open bill directly
     setIsViewingBill(true);
   };
 
@@ -154,6 +191,9 @@ const MainApp: React.FC = () => {
     }
 
     if (isViewingClosing) {
+      if (role !== 'admin') {
+        return <AccessDeniedView onGoBack={() => setIsViewingClosing(false)} />;
+      }
       return <DailyClosingScreen onBack={() => setIsViewingClosing(false)} />;
     }
 
@@ -173,10 +213,10 @@ const MainApp: React.FC = () => {
     return renderTabContent();
   };
 
-  // Active Primary Tab Screen Rendering
+  // Role-Based Screen Router & Guard
   const renderTabContent = () => {
-    // Admin role routing
-    if (currentUser.role === 'admin') {
+    // ADMIN PERSONA
+    if (role === 'admin') {
       switch (activeTab) {
         case 'home':
           return (
@@ -252,8 +292,13 @@ const MainApp: React.FC = () => {
       }
     }
 
-    // Dining Staff role routing
-    if (currentUser.role === 'dining') {
+    // DINING PERSONA
+    if (role === 'dining') {
+      // Guard against admin routes
+      if (['home', 'payments', 'reports', 'employees'].includes(activeTab)) {
+        return <AccessDeniedView onGoBack={() => setActiveTab('tables')} />;
+      }
+
       switch (activeTab) {
         case 'tables':
           return (
@@ -288,8 +333,12 @@ const MainApp: React.FC = () => {
       }
     }
 
-    // Kitchen Staff role routing
-    if (currentUser.role === 'kitchen') {
+    // KITCHEN PERSONA
+    if (role === 'kitchen') {
+      if (['home', 'tables', 'takeaway', 'payments', 'reports', 'employees'].includes(activeTab)) {
+        return <AccessDeniedView onGoBack={() => setActiveTab('kitchen')} />;
+      }
+
       switch (activeTab) {
         case 'kitchen':
           return <KitchenScreen />;
@@ -302,8 +351,12 @@ const MainApp: React.FC = () => {
       }
     }
 
-    // Takeaway Staff role routing
-    if (currentUser.role === 'takeaway') {
+    // TAKEAWAY PERSONA
+    if (role === 'takeaway') {
+      if (['home', 'tables', 'payments', 'reports', 'employees', 'kitchen'].includes(activeTab)) {
+        return <AccessDeniedView onGoBack={() => setActiveTab('takeaway')} />;
+      }
+
       switch (activeTab) {
         case 'takeaway':
           return (
@@ -395,7 +448,7 @@ const MainApp: React.FC = () => {
         />
       )}
 
-      {/* Global Thermal Receipt Modal Simulator */}
+      {/* Global Thermal Receipt Modal */}
       <ReceiptModal />
 
       {/* Global Notifications Drawer/Modal */}
@@ -408,10 +461,12 @@ const MainApp: React.FC = () => {
 
 export function App() {
   return (
-    <RestaurantProvider>
-      <MainApp />
-      <Toast />
-    </RestaurantProvider>
+    <AuthProvider>
+      <RestaurantProvider>
+        <MainApp />
+        <Toast />
+      </RestaurantProvider>
+    </AuthProvider>
   );
 }
 

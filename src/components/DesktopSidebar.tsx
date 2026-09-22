@@ -18,10 +18,9 @@ import {
   Maximize2,
   Minimize2,
   ShieldCheck,
-  CheckCircle2,
-  Percent,
 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
+import { useAuth } from '../context/AuthContext';
 import { Role } from '../types';
 
 interface DesktopSidebarProps {
@@ -37,23 +36,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   onOpenNotifications,
   onOpenClosing,
 }) => {
-  const {
-    currentUser,
-    logout,
-    login,
-    restaurantConfig,
-    orders,
-    kitchenTickets,
-    tables,
-    notifications,
-    showToast,
-  } = useRestaurant();
+  const { orders, kitchenTickets, tables, notifications } = useRestaurant();
+  const { user: authUser, role, logout } = useAuth();
 
   const [currentTime, setCurrentTime] = useState<string>('');
-  const [currentDate, setCurrentDate] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
-  // Live POS clock
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -63,14 +51,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           minute: '2-digit',
           second: '2-digit',
           hour12: true,
-        })
-      );
-      setCurrentDate(
-        now.toLocaleDateString('en-IN', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
         })
       );
     };
@@ -91,7 +71,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     }
   };
 
-  // Badge calculations
   const pendingPaymentsCount = orders.filter(
     (o) => o.status === 'payment_submitted' && o.payment?.status === 'pending'
   ).length;
@@ -103,18 +82,16 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   const billRequestedCount = tables.filter((t) => t.status === 'bill_requested').length;
   const unreadNotifsCount = notifications.filter((n) => !n.read).length;
 
-  // Define navigation items based on current role
   interface NavItem {
     id: string;
     label: string;
     icon: React.ElementType;
     badge?: number;
     badgeColor?: string;
-    category?: string;
   }
 
   const getRoleNavItems = (): { category: string; items: NavItem[] }[] => {
-    if (currentUser.role === 'admin') {
+    if (role === 'admin') {
       return [
         {
           category: 'Operations',
@@ -127,11 +104,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               badge: billRequestedCount > 0 ? billRequestedCount : undefined,
               badgeColor: 'bg-amber-500',
             },
-            {
-              id: 'takeaway',
-              label: 'Takeaway Counter',
-              icon: ShoppingBag,
-            },
+            { id: 'takeaway', label: 'Takeaway Counter', icon: ShoppingBag },
             {
               id: 'payments',
               label: 'Payment Verifications',
@@ -146,7 +119,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           category: 'Management',
           items: [
             { id: 'menu', label: 'Menu & Prices (GST)', icon: UtensilsCrossed },
-            { id: 'employees', label: 'Staff & Roles', icon: Users },
+            { id: 'employees', label: 'Employee Management', icon: Users },
             { id: 'reports', label: 'Tax & Sales Analytics', icon: BarChart3 },
             { id: 'profile', label: 'Restaurant Settings', icon: Settings },
           ],
@@ -154,7 +127,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       ];
     }
 
-    if (currentUser.role === 'dining') {
+    if (role === 'dining') {
       return [
         {
           category: 'Service Flow',
@@ -174,7 +147,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       ];
     }
 
-    if (currentUser.role === 'kitchen') {
+    if (role === 'kitchen') {
       return [
         {
           category: 'Kitchen Station',
@@ -184,9 +157,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               label: 'Live KDS Board',
               icon: ChefHat,
               badge: kitchenActiveCount > 0 ? kitchenActiveCount : undefined,
-              badgeColor: 'bg-[#C94B4B]',
+              badgeColor: 'bg-orange-500',
             },
-            { id: 'menu', label: '86 Stock Items', icon: UtensilsCrossed },
+            { id: 'menu', label: 'Menu Catalog', icon: UtensilsCrossed },
             { id: 'profile', label: 'Station Profile', icon: Settings },
           ],
         },
@@ -208,6 +181,43 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
   const navGroups = getRoleNavItems();
 
+  const getRoleBadgeStyle = (r: Role | null) => {
+    switch (r) {
+      case 'admin':
+        return {
+          bg: 'bg-red-50 text-red-700 border-red-200',
+          avatarBg: 'bg-red-100 text-red-800',
+          label: 'ADMIN',
+        };
+      case 'dining':
+        return {
+          bg: 'bg-blue-50 text-blue-700 border-blue-200',
+          avatarBg: 'bg-blue-100 text-blue-800',
+          label: 'DINING',
+        };
+      case 'kitchen':
+        return {
+          bg: 'bg-orange-50 text-orange-700 border-orange-200',
+          avatarBg: 'bg-orange-100 text-orange-800',
+          label: 'KITCHEN',
+        };
+      case 'takeaway':
+        return {
+          bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          avatarBg: 'bg-emerald-100 text-emerald-800',
+          label: 'TAKEAWAY',
+        };
+      default:
+        return {
+          bg: 'bg-gray-50 text-gray-700 border-gray-200',
+          avatarBg: 'bg-gray-100 text-gray-800',
+          label: 'STAFF',
+        };
+    }
+  };
+
+  const roleStyle = getRoleBadgeStyle(role);
+
   return (
     <aside className="hidden lg:flex flex-col w-68 bg-white border-r border-[#E8E6E3] shrink-0 h-screen sticky top-0 z-40 select-none shadow-[2px_0_8px_rgba(0,0,0,0.02)]">
       {/* Brand Header */}
@@ -224,7 +234,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               </span>
             </div>
             <span className="text-[11.5px] font-semibold text-[#737373] truncate block max-w-[140px]">
-              {restaurantConfig.name}
+              {authUser?.restaurantName || 'Spice House Restaurant'}
             </span>
           </div>
         </div>
@@ -296,8 +306,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           </div>
         ))}
 
-        {/* Quick EOD Closing Button for Admin */}
-        {currentUser.role === 'admin' && (
+        {role === 'admin' && (
           <div className="pt-2">
             <button
               onClick={onOpenClosing}
@@ -316,20 +325,25 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         )}
       </div>
 
-      {/* User Footer Card */}
+      {/* Authenticated User Footer Card */}
       <div className="p-3 border-t border-[#E8E6E3] bg-[#FDFDFD]">
         <div className="flex items-center justify-between p-2 rounded-xl bg-[#F8F8F6] border border-[#E8E6E3]">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-[#FCE8E8] text-[#A83B3B] font-extrabold text-[13px] flex items-center justify-center shrink-0">
-              {currentUser.name[0]}
+            <div
+              className={`w-8.5 h-8.5 rounded-xl font-extrabold text-[13px] flex items-center justify-center shrink-0 ${roleStyle.avatarBg}`}
+            >
+              {authUser?.name ? authUser.name[0].toUpperCase() : 'U'}
             </div>
             <div className="min-w-0">
               <div className="text-[12.5px] font-extrabold text-[#242424] truncate">
-                {currentUser.name}
+                {authUser?.name || 'Authenticated User'}
               </div>
-              <div className="text-[10px] font-semibold text-[#737373] capitalize truncate flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                {currentUser.role} Role
+              <div className="text-[10px] font-semibold text-[#737373] truncate flex items-center gap-1">
+                <span className="font-mono font-bold text-[#555]">{authUser?.employeeId}</span>
+                <span>•</span>
+                <span className={`px-1 rounded text-[9px] font-extrabold border ${roleStyle.bg}`}>
+                  {roleStyle.label}
+                </span>
               </div>
             </div>
           </div>

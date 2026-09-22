@@ -149,12 +149,12 @@ export const OrdersListScreen: React.FC<OrdersListScreenProps> = ({
 
         {/* Orders Stream */}
         <div className="space-y-2.5">
-          {filteredOrders.map((ord) => {
+          {filteredOrders.map((ord, idx) => {
             const badge = getStatusBadge(ord.status);
 
             return (
               <div
-                key={ord.id}
+                key={`${ord.id}-${idx}`}
                 onClick={() => onSelectOrder(ord)}
                 className="bg-white rounded-3xl p-4 border border-[#E8E6E3] shadow-xs space-y-2.5 cursor-pointer active:scale-98 transition-all hover:border-[#C94B4B]/40"
               >

@@ -82,19 +82,19 @@ export const DailyClosingScreen: React.FC<DailyClosingScreenProps> = ({ onBack }
             <div className="p-5 bg-[#F8F8F6] rounded-2xl border border-[#E8E6E3] text-left space-y-2.5 text-[13.5px] max-w-md mx-auto">
               <div className="flex justify-between">
                 <span>Total Confirmed Sales</span>
-                <strong className="text-[#242424]">₹{summary.todaySales.toLocaleString()}</strong>
+                <strong className="text-[#242424]">₹{(summary?.todaySales ?? 0).toLocaleString()}</strong>
               </div>
               <div className="flex justify-between">
                 <span>Total Orders Verified</span>
-                <strong>{summary.totalOrders}</strong>
+                <strong>{summary?.totalOrders ?? 0}</strong>
               </div>
               <div className="flex justify-between">
                 <span>Total GST Collected</span>
-                <strong>₹{summary.totalGst.toLocaleString()}</strong>
+                <strong>₹{(summary?.totalGst ?? 0).toLocaleString()}</strong>
               </div>
               <div className="flex justify-between text-emerald-700 font-bold pt-2 border-t border-[#E8E6E3]">
                 <span>Physical Cash Reconciled</span>
-                <span>₹{counted.toLocaleString()}</span>
+                <span>₹{(counted ?? 0).toLocaleString()}</span>
               </div>
             </div>
 
@@ -115,26 +115,26 @@ export const DailyClosingScreen: React.FC<DailyClosingScreenProps> = ({ onBack }
                   Today's Confirmed Revenue
                 </span>
                 <span className="text-[11.5px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  {summary.totalOrders} Orders Verified
+                  {summary?.totalOrders ?? 0} Orders Verified
                 </span>
               </div>
 
               <div className="text-[32px] font-extrabold text-[#242424]">
-                ₹{summary.todaySales.toLocaleString('en-IN')}
+                ₹{(summary?.todaySales ?? 0).toLocaleString('en-IN')}
               </div>
 
               <div className="grid grid-cols-3 gap-3 pt-3 border-t border-[#F5F5F3] text-[13px]">
                 <div className="p-3 bg-[#F8F8F6] rounded-2xl">
                   <span className="text-[11px] text-[#737373] block">Cash Total</span>
-                  <strong className="text-[#242424] text-[15px]">₹{summary.cashSales.toLocaleString()}</strong>
+                  <strong className="text-[#242424] text-[15px]">₹{(summary?.cashSales ?? 0).toLocaleString()}</strong>
                 </div>
                 <div className="p-3 bg-[#F8F8F6] rounded-2xl">
                   <span className="text-[11px] text-[#737373] block">UPI Total</span>
-                  <strong className="text-[#242424] text-[15px]">₹{summary.upiSales.toLocaleString()}</strong>
+                  <strong className="text-[#242424] text-[15px]">₹{(summary?.upiSales ?? 0).toLocaleString()}</strong>
                 </div>
                 <div className="p-3 bg-[#F8F8F6] rounded-2xl">
                   <span className="text-[11px] text-[#737373] block">Card Total</span>
-                  <strong className="text-[#242424] text-[15px]">₹{summary.cardSales.toLocaleString()}</strong>
+                  <strong className="text-[#242424] text-[15px]">₹{(summary?.cardSales ?? 0).toLocaleString()}</strong>
                 </div>
               </div>
             </div>
@@ -211,11 +211,11 @@ export const DailyClosingScreen: React.FC<DailyClosingScreenProps> = ({ onBack }
               <h4 className="font-extrabold text-[#242424]">Electronic Batch Settlement</h4>
               <div className="flex justify-between text-[#555]">
                 <span>UPI Bank Settlements (Automated)</span>
-                <strong className="text-blue-800">₹{summary.upiSales.toLocaleString()}</strong>
+                <strong className="text-blue-800">₹{(summary?.upiSales ?? 0).toLocaleString()}</strong>
               </div>
               <div className="flex justify-between text-[#555]">
                 <span>Card EDC Batch Close</span>
-                <strong className="text-purple-800">₹{summary.cardSales.toLocaleString()}</strong>
+                <strong className="text-purple-800">₹{(summary?.cardSales ?? 0).toLocaleString()}</strong>
               </div>
             </div>
 

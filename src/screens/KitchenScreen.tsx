@@ -12,14 +12,21 @@ import {
   Filter,
   Volume2,
   VolumeX,
+  AlertTriangle,
+  Search,
+  X,
 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { KitchenTicket } from '../types';
 
 export const KitchenScreen: React.FC = () => {
-  const { kitchenTickets, updateKitchenTicketStatus, currentUser } = useRestaurant();
+  const { kitchenTickets, updateKitchenTicketStatus, currentUser, dishes, toggleDishAvailability } = useRestaurant();
   const [mobileTab, setMobileTab] = useState<'new' | 'preparing' | 'ready' | 'served'>('new');
   const [typeFilter, setTypeFilter] = useState<'all' | 'dining' | 'takeaway'>('all');
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockSearchQuery, setStockSearchQuery] = useState('');
+
+  const outOfStockCount = dishes.filter((d) => !d.isAvailable).length;
 
   // Filtered by type
   const activeTickets = kitchenTickets.filter((t) => {
@@ -234,6 +241,25 @@ export const KitchenScreen: React.FC = () => {
                 Takeaway ({kitchenTickets.filter((t) => t.orderType === 'takeaway').length})
               </button>
             </div>
+
+            {/* Quick 86 / Stock Out Management Button */}
+            <button
+              onClick={() => setIsStockModalOpen(true)}
+              id="btn-kds-stock-out-manager"
+              className={`h-9 px-3 rounded-2xl font-extrabold text-[12px] border flex items-center gap-1.5 transition-all active:scale-95 shadow-xs shrink-0 ${
+                outOfStockCount > 0
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 animate-pulse'
+                  : 'bg-white hover:bg-[#F5F5F3] text-[#242424] border-[#E8E6E3]'
+              }`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Stock Out (86)</span>
+              {outOfStockCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-white text-amber-800 text-[10px] font-black flex items-center justify-center">
+                  {outOfStockCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -422,6 +448,130 @@ export const KitchenScreen: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 86 / Stock Out Item Manager Modal for Chefs */}
+      {isStockModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#E8E6E3] overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[#E8E6E3] flex items-center justify-between bg-[#F8F8F6]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-xs">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-[17px] font-extrabold text-[#242424]">86 / Stock Out Manager</h3>
+                  <p className="text-[11.5px] text-[#737373]">
+                    Instantly toggle dish availability across all POS terminals and waiter tablets
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsStockModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-[#E8E6E3] hover:bg-[#DDD] text-[#555] flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Search filter */}
+            <div className="p-4 border-b border-[#F0EFEA] bg-white">
+              <div className="relative">
+                <Search className="w-4 h-4 text-[#999] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search dishes by name or category..."
+                  value={stockSearchQuery}
+                  onChange={(e) => setStockSearchQuery(e.target.value)}
+                  className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#F8F8F6] border border-[#E8E6E3] text-[13px] font-medium text-[#242424] focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            {/* Dish List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {dishes
+                .filter(
+                  (d) =>
+                    d.name.toLowerCase().includes(stockSearchQuery.toLowerCase()) ||
+                    d.category.toLowerCase().includes(stockSearchQuery.toLowerCase())
+                )
+                .map((dish) => {
+                  const isAvail = dish.isAvailable;
+                  return (
+                    <div
+                      key={dish.id}
+                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                        isAvail
+                          ? 'bg-white border-[#E8E6E3]'
+                          : 'bg-amber-50 border-amber-300 ring-1 ring-amber-300'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              dish.isVeg ? 'bg-emerald-600' : 'bg-red-600'
+                            }`}
+                          />
+                          <h4
+                            className={`text-[13.5px] font-extrabold truncate ${
+                              isAvail ? 'text-[#242424]' : 'text-[#888] line-through'
+                            }`}
+                          >
+                            {dish.name}
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-md bg-[#F0EFEA] text-[#555] text-[10.5px] font-bold">
+                            {dish.category}
+                          </span>
+                        </div>
+                        <div className="text-[12px] font-mono text-[#737373] mt-0.5">
+                          ₹{dish.price}
+                        </div>
+                      </div>
+
+                      {/* Instant Toggle Button */}
+                      <button
+                        onClick={() => toggleDishAvailability(dish.id)}
+                        id={`btn-toggle-86-${dish.id}`}
+                        className={`h-9 px-3.5 rounded-xl text-[12px] font-extrabold border flex items-center gap-1.5 transition-all active:scale-95 shrink-0 ${
+                          isAvail
+                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-xs'
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            isAvail ? 'bg-emerald-500' : 'bg-white'
+                          }`}
+                        />
+                        <span>{isAvail ? 'In Stock' : '86 OUT OF STOCK'}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-[#E8E6E3] bg-[#F8F8F6] flex items-center justify-between text-[12px]">
+              <span className="text-[#737373]">
+                {outOfStockCount > 0 ? (
+                  <strong className="text-amber-800 font-extrabold">{outOfStockCount} items</strong>
+                ) : (
+                  'All items'
+                )}{' '}
+                currently out of stock
+              </span>
+              <button
+                onClick={() => setIsStockModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-[#242424] text-white font-extrabold text-[12px] hover:bg-black transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
