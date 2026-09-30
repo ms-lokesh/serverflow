@@ -19,9 +19,9 @@ interface DailyClosingScreenProps {
 
 export const DailyClosingScreen: React.FC<DailyClosingScreenProps> = ({ onBack }) => {
   const { summary, showToast, currentUser } = useRestaurant();
-  const [openingCash, setOpeningCash] = useState<number>(2000);
-  const [pettyCashExpenses, setPettyCashExpenses] = useState<number>(1200);
-  const [countedCash, setCountedCash] = useState<string>('23200');
+  const [openingCash, setOpeningCash] = useState<number>(0);
+  const [pettyCashExpenses, setPettyCashExpenses] = useState<number>(0);
+  const [countedCash, setCountedCash] = useState<string>((summary?.cashSales ?? 0).toString());
   const [isClosed, setIsClosed] = useState<boolean>(false);
 
   const isAdmin = currentUser.role === 'admin';

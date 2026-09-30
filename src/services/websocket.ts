@@ -3,6 +3,8 @@
  * Handles auto-reconnection with exponential backoff, ping/pong heartbeats, and event routing.
  */
 
+import { getServerUrl } from './api';
+
 type EventHandler = (data: any) => void;
 
 class WebSocketClient {
@@ -20,9 +22,21 @@ class WebSocketClient {
     }
 
     this.isExplicitlyClosed = false;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    let wsUrl: string;
+    const envWs = (import.meta as any).env?.VITE_WS_URL;
+    const serverUrl = getServerUrl();
+
+    if (envWs) {
+      wsUrl = envWs;
+    } else if (serverUrl && serverUrl.startsWith('http')) {
+      const apiUrl = new URL(serverUrl);
+      const wsProtocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${wsProtocol}//${apiUrl.host}/ws`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      wsUrl = `${protocol}//${host}/ws`;
+    }
 
     try {
       this.socket = new WebSocket(wsUrl);

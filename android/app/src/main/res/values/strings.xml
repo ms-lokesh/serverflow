@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ServeFlow</string>
+    <string name="title_activity_main">ServeFlow</string>
+    <string name="package_name">com.serveflow.restaurant</string>
+    <string name="custom_url_scheme">com.serveflow.restaurant</string>
+</resources>

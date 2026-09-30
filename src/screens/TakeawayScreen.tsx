@@ -39,7 +39,7 @@ export const TakeawayScreen: React.FC<TakeawayScreenProps> = ({
   const categories = ['All', 'Main Course', 'Starters', 'Rice', 'Breads', 'Beverages', 'Desserts'];
 
   // Filter takeaway orders
-  const takeawayOrders = orders.filter((o) => o.type === 'takeaway');
+  const takeawayOrders = orders.filter((o) => o.orderType === 'takeaway' || (o as any).type === 'takeaway');
   const activeTakeaways = takeawayOrders.filter((o) => o.status !== 'closed');
   const pastTakeaways = takeawayOrders.filter((o) => o.status === 'closed');
 

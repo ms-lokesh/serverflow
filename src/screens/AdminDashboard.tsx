@@ -57,40 +57,74 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     year: 'numeric',
   });
 
-  // Top selling mock metrics
-  const topDishes = [
-    { name: 'Chicken Biryani', count: 48, revenue: '₹10,560', change: '+18%' },
-    { name: 'Chicken 65', count: 34, revenue: '₹7,480', change: '+12%' },
-    { name: 'Chicken Fried Rice', count: 26, revenue: '₹5,460', change: '+8%' },
-    { name: 'Coke', count: 42, revenue: '₹1,470', change: '+24%' },
-  ];
+  // Dynamically aggregate top-selling dishes from real orders
+  const topDishes = React.useMemo(() => {
+    const dishSalesMap = new Map<string, { count: number; revenue: number }>();
+    orders.forEach((o) => {
+      if (o.status !== 'payment_rejected') {
+        o.items?.forEach((it) => {
+          const curr = dishSalesMap.get(it.name) || { count: 0, revenue: 0 };
+          dishSalesMap.set(it.name, {
+            count: curr.count + it.quantity,
+            revenue: curr.revenue + (it.price * it.quantity),
+          });
+        });
+      }
+    });
 
-  // Chart data simulation per timeframe
-  const chartBars =
-    salesTimeframe === 'today'
-      ? [
-          { label: '11am', value: 3200, height: '35%' },
-          { label: '12pm', value: 7800, height: '70%' },
-          { label: '1pm', value: 12400, height: '95%' },
-          { label: '2pm', value: 9200, height: '80%' },
-          { label: '3pm', value: 4500, height: '45%' },
-          { label: 'Now', value: summary.todaySales, height: '100%', active: true },
-        ]
-      : salesTimeframe === 'week'
-      ? [
-          { label: 'Mon', value: 38000, height: '65%' },
-          { label: 'Tue', value: 41000, height: '72%' },
-          { label: 'Wed', value: 39500, height: '68%' },
-          { label: 'Thu', value: 44200, height: '78%' },
-          { label: 'Fri', value: 52000, height: '90%' },
-          { label: 'Today', value: summary.todaySales, height: '85%', active: true },
-        ]
-      : [
-          { label: 'W1', value: 245000, height: '70%' },
-          { label: 'W2', value: 280000, height: '82%' },
-          { label: 'W3', value: 310000, height: '92%' },
-          { label: 'W4', value: 295000, height: '88%', active: true },
-        ];
+    return Array.from(dishSalesMap.entries())
+      .map(([name, stat]) => ({
+        name,
+        count: stat.count,
+        revenue: `₹${stat.revenue.toLocaleString('en-IN')}`,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [orders]);
+
+  // Dynamic sales bars derived from real orders or ₹0 baseline
+  const chartBars = React.useMemo(() => {
+    const maxSale = Math.max(summary.todaySales, 1000);
+    if (salesTimeframe === 'today') {
+      const buckets = [
+        { label: 'Morning', value: 0 },
+        { label: 'Noon', value: 0 },
+        { label: 'Afternoon', value: 0 },
+        { label: 'Evening', value: 0 },
+        { label: 'Night', value: 0 },
+        { label: 'Now', value: summary.todaySales, active: true },
+      ];
+      orders.forEach((o) => {
+        if (o.status === 'payment_verified' || o.status === 'closed') {
+          const d = o.createdAt ? new Date(o.createdAt) : null;
+          const h = d ? d.getHours() : 12;
+          const val = o.grandTotal || 0;
+          if (h < 11) buckets[0].value += val;
+          else if (h < 14) buckets[1].value += val;
+          else if (h < 17) buckets[2].value += val;
+          else if (h < 20) buckets[3].value += val;
+          else buckets[4].value += val;
+        }
+      });
+      return buckets.map((b) => {
+        const pct = summary.todaySales > 0 ? Math.min(100, Math.round((b.value / maxSale) * 100)) : 0;
+        return {
+          label: b.label,
+          value: b.value,
+          height: summary.todaySales > 0 ? `${Math.max(pct, 6)}%` : '4%',
+          active: b.active,
+        };
+      });
+    }
+    return [
+      { label: 'Mon', value: 0, height: '4%' },
+      { label: 'Tue', value: 0, height: '4%' },
+      { label: 'Wed', value: 0, height: '4%' },
+      { label: 'Thu', value: 0, height: '4%' },
+      { label: 'Fri', value: 0, height: '4%' },
+      { label: 'Today', value: summary.todaySales, height: summary.todaySales > 0 ? '75%' : '4%', active: true },
+    ];
+  }, [orders, summary.todaySales, salesTimeframe]);
 
   return (
     <div className="pb-28 px-4 sm:px-6 lg:px-8 pt-4 space-y-5 w-full max-w-7xl mx-auto">
@@ -138,7 +172,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               ₹{(summary?.todaySales ?? 0).toLocaleString('en-IN')}
             </div>
             <div className="text-[10px] text-emerald-700 font-semibold mt-1 flex items-center gap-0.5">
-              <ArrowUpRight className="w-3 h-3" /> +14.2% vs yesterday
+              {summary.todaySales > 0 ? (
+                <>
+                  <ArrowUpRight className="w-3 h-3" /> Live active sales
+                </>
+              ) : (
+                <span>Awaiting first order</span>
+              )}
             </div>
           </div>
 
@@ -152,10 +192,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <Utensils className="w-4 h-4 text-[#C94B4B]" />
             </div>
             <div className="text-[20px] sm:text-[24px] font-extrabold text-[#242424] tracking-tight">
-              {openTablesCount} <span className="text-[12px] font-normal text-[#737373]">/ 20</span>
+              {openTablesCount} <span className="text-[12px] font-normal text-[#737373]">/ {tables.length || 12}</span>
             </div>
             <div className="text-[10px] text-[#737373] font-medium mt-1">
-              {20 - openTablesCount} available
+              {Math.max(0, (tables.length || 12) - openTablesCount)} available
             </div>
           </div>
 
@@ -410,22 +450,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span className="text-[11px] text-[#737373]">Today's volume</span>
             </div>
 
-            <div className="space-y-2.5">
-              {topDishes.map((dish, i) => (
-                <div key={dish.name} className="flex items-center justify-between text-[13px] py-1 border-b border-[#F5F5F3] last:border-0">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-[#F8F8F6] text-[#737373] font-bold text-[10px] flex items-center justify-center">
-                      {i + 1}
-                    </span>
-                    <span className="font-semibold text-[#242424]">{dish.name}</span>
+            {topDishes.length === 0 ? (
+              <div className="py-7 px-4 bg-[#F8F8F6] rounded-2xl border border-dashed border-[#E8E6E3] text-center">
+                <UtensilsCrossed className="w-7 h-7 text-[#AAA] mx-auto mb-1.5" />
+                <p className="text-[12.5px] font-bold text-[#444]">No Dishes Sold Yet</p>
+                <p className="text-[11px] text-[#888]">Live menu rankings will appear here as orders are placed.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {topDishes.map((dish, i) => (
+                  <div key={dish.name} className="flex items-center justify-between text-[13px] py-1 border-b border-[#F5F5F3] last:border-0">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-5 h-5 rounded-full bg-[#F8F8F6] text-[#737373] font-bold text-[10px] flex items-center justify-center">
+                        {i + 1}
+                      </span>
+                      <span className="font-semibold text-[#242424]">{dish.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-[#242424]">{dish.count} orders</span>
+                      <span className="text-[10px] text-[#737373] block">{dish.revenue}</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-bold text-[#242424]">{dish.count} orders</span>
-                    <span className="text-[10px] text-[#737373] block">{dish.revenue}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

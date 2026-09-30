@@ -737,6 +737,72 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     refreshAllData();
   };
 
+  // Live reactive KPI calculation derived dynamically from real-time orders & tables
+  const liveSummary = React.useMemo(() => {
+    let todaySales = 0;
+    let diningSales = 0;
+    let takeawaySales = 0;
+    let cashSales = 0;
+    let upiSales = 0;
+    let cardSales = 0;
+    let taxableSales = 0;
+    let cgst = 0;
+    let sgst = 0;
+    let totalGst = 0;
+    let pendingPayments = 0;
+
+    const paidOrders = orders.filter((o) => o.status === 'payment_verified' || o.status === 'closed');
+    const openOrders = orders.filter(
+      (o) => o.status !== 'payment_verified' && o.status !== 'closed' && o.status !== 'payment_rejected'
+    );
+
+    paidOrders.forEach((o) => {
+      todaySales += o.grandTotal || 0;
+      taxableSales += o.taxableAmount || 0;
+      cgst += o.cgst || 0;
+      sgst += o.sgst || 0;
+      totalGst += o.totalGst || 0;
+
+      if (o.orderType === 'dining') {
+        diningSales += o.grandTotal || 0;
+      } else {
+        takeawaySales += o.grandTotal || 0;
+      }
+
+      const method = o.payment?.method;
+      if (method === 'CASH') cashSales += o.payment?.amount || o.grandTotal || 0;
+      else if (method === 'UPI') upiSales += o.payment?.amount || o.grandTotal || 0;
+      else if (method === 'CARD') cardSales += o.payment?.amount || o.grandTotal || 0;
+    });
+
+    orders.forEach((o) => {
+      if (o.status === 'payment_submitted' || o.status === 'bill_requested') {
+        pendingPayments += o.payment?.amount || o.grandTotal || 0;
+      }
+    });
+
+    const openTables = tables.filter((t) => t.status !== 'available').length;
+    const totalOrders = orders.filter((o) => o.status !== 'payment_rejected').length;
+
+    return {
+      todaySales: Math.max(todaySales, summary.todaySales || 0),
+      openTables,
+      pendingPayments: Math.max(pendingPayments, summary.pendingPayments || 0),
+      totalOrders: Math.max(totalOrders, summary.totalOrders || 0),
+      paidOrders: Math.max(paidOrders.length, (summary as any).paidOrders || 0),
+      openOrders: Math.max(openOrders.length, (summary as any).openOrders || 0),
+      diningSales: Math.max(diningSales, summary.diningSales || 0),
+      takeawaySales: Math.max(takeawaySales, summary.takeawaySales || 0),
+      cashSales: Math.max(cashSales, summary.cashSales || 0),
+      upiSales: Math.max(upiSales, summary.upiSales || 0),
+      cardSales: Math.max(cardSales, summary.cardSales || 0),
+      taxableSales: Math.max(taxableSales, summary.taxableSales || 0),
+      cgst: Math.max(cgst, summary.cgst || 0),
+      sgst: Math.max(sgst, summary.sgst || 0),
+      totalGst: Math.max(totalGst, summary.totalGst || 0),
+    };
+  }, [orders, tables, summary]);
+
   const getOrderById = (orderId: string) => orders.find((o) => o.id === orderId);
   const getTableByNumber = (tableNumber: string) => tables.find((t) => t.number === tableNumber);
 
@@ -758,7 +824,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         dishes,
         employees,
         notifications,
-        summary,
+        summary: liveSummary,
         activeToast,
         showToast,
         dismissToast,

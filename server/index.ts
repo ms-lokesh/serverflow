@@ -1,5 +1,7 @@
 import express from 'express';
 import http from 'http';
+import path from 'path';
+import fs from 'fs';
 import cookieParser from 'cookie-parser';
 import { config } from './config';
 import { initWebSocket } from './websocket';
@@ -27,10 +29,12 @@ app.use(cookieParser());
 // CORS & Credentials header handling
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin) {
+  if (origin && origin !== 'null') {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader(
     'Access-Control-Allow-Methods',
     'GET, POST, PUT, PATCH, DELETE, OPTIONS'
@@ -52,7 +56,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'serveflow-api', timestamp: new Date().toISOString() });
 });
 
-// Route registration
+// API Route registration
 app.use('/auth', authRouter);
 app.use('/api/employees', employeesRouter);
 app.use('/api/tables', tablesRouter);
@@ -62,13 +66,32 @@ app.use('/api/kot', kotRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/sync', syncRouter);
 
-// Global 404 handler for API
+// Serve compiled React frontend assets from dist/
+const distPath = path.resolve(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+
+  // SPA fallback for non-API client routes
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/ws')) {
+      return next();
+    }
+    const indexPath = path.join(distPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    next();
+  });
+}
+
+// Global 404 handler for unmatched API routes
 app.use((req, res) => {
   res.status(404).json({ success: false, error: 'NOT_FOUND', message: `Route ${req.method} ${req.path} not found.` });
 });
 
-server.listen(config.port, () => {
-  console.log(`[ServeFlow API Server] Running on http://localhost:${config.port}`);
+server.listen(config.port, '0.0.0.0', () => {
+  console.log(`[ServeFlow API Server] Running on http://0.0.0.0:${config.port}`);
 });
 
 export { app, server };
+

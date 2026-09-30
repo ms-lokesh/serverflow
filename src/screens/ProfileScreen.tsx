@@ -324,19 +324,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </p>
         </div>
 
-        {/* Reset State Action */}
+        {/* Sync Live Database Action */}
         <div className="pt-2">
           <button
             onClick={() => {
-              if (confirm('Reset prototype mock database to original state?')) {
-                resetMockData();
-              }
+              resetMockData();
+              showToast('Synced all restaurant data with live database', 'success');
             }}
-            id="btn-reset-prototype-data"
-            className="w-full py-3 rounded-2xl bg-white border border-[#E8E6E3] text-[#737373] hover:text-red-700 hover:border-red-200 font-bold text-[13px] flex items-center justify-center gap-2 active:scale-98 shadow-2xs"
+            id="btn-sync-live-data"
+            className="w-full py-3 rounded-2xl bg-white border border-[#E8E6E3] text-[#737373] hover:text-[#242424] hover:border-[#CCC] font-bold text-[13px] flex items-center justify-center gap-2 active:scale-98 shadow-2xs"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Reset Demo Data to Initial State</span>
+            <span>Sync Live Restaurant Data</span>
           </button>
         </div>
       </div>

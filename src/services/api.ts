@@ -21,11 +21,62 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : endpoint;
+export function getServerUrl(): string {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('serveflow_server_url');
+    if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
 
+    const envUrl = (import.meta as any).env?.VITE_API_URL;
+    if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '');
+
+    // If running in Capacitor or mobile webview
+    const isCapacitor =
+      (window as any).Capacitor !== undefined ||
+      window.location.protocol === 'file:' ||
+      (window.location.hostname === 'localhost' && window.location.port !== '4000' && window.location.port !== '3000');
+
+    if (isCapacitor) {
+      return 'http://192.168.161.0:4000';
+    }
+  }
+  return '';
+}
+
+export function setServerUrl(url: string): void {
+  if (typeof window !== 'undefined') {
+    if (!url || !url.trim()) {
+      localStorage.removeItem('serveflow_server_url');
+    } else {
+      localStorage.setItem('serveflow_server_url', url.trim().replace(/\/+$/, ''));
+    }
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('serveflow_access_token');
+  }
+  return null;
+}
+
+export function setAuthToken(token: string | null): void {
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('serveflow_access_token', token);
+    } else {
+      localStorage.removeItem('serveflow_access_token');
+    }
+  }
+}
+
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const base = getServerUrl();
+  const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`;
+
+  const token = getAuthToken();
   const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const config: RequestInit = {
@@ -34,7 +85,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       ...defaultHeaders,
       ...options.headers,
     },
-    credentials: 'include', // Include HttpOnly session cookies
+    credentials: 'include', // Include HttpOnly session cookies where supported
   };
 
   try {
@@ -52,8 +103,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     return data;
   } catch (err: any) {
     if (err instanceof ApiError) throw err;
+    const currentServer = base || 'localhost:4000';
     throw new ApiError(
-      'Unable to connect to ServeFlow. Please check your network or server.',
+      `Unable to connect to ServeFlow at ${currentServer}. Please verify your server is running and Wi-Fi is connected.`,
       0,
       'NETWORK_ERROR'
     );
@@ -63,23 +115,54 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   // Authentication
   auth: {
-    login: (identifier: string, password: string) =>
-      request<ApiResponse<{ user: any; permissions: string[]; accessToken: string }>>('/auth/login', {
+    login: async (identifier: string, password: string) => {
+      const res = await request<ApiResponse<{ user: any; permissions: string[]; accessToken: string }>>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ identifier, password }),
-      }),
-    logout: () =>
-      request<ApiResponse>('/auth/logout', {
+      });
+      if (res.success && res.data?.accessToken) {
+        setAuthToken(res.data.accessToken);
+      }
+      return res;
+    },
+    logout: async () => {
+      try {
+        await request<ApiResponse>('/auth/logout', {
+          method: 'POST',
+        });
+      } finally {
+        setAuthToken(null);
+      }
+    },
+    refresh: async () => {
+      const res = await request<ApiResponse<{ user: any; permissions: string[]; accessToken: string }>>('/auth/refresh', {
         method: 'POST',
-      }),
-    refresh: () =>
-      request<ApiResponse<{ user: any; permissions: string[]; accessToken: string }>>('/auth/refresh', {
-        method: 'POST',
-      }),
+      });
+      if (res.success && res.data?.accessToken) {
+        setAuthToken(res.data.accessToken);
+      }
+      return res;
+    },
     me: () =>
       request<ApiResponse<{ user: any; permissions: string[] }>>('/auth/me', {
         method: 'GET',
       }),
+    ping: async (urlOverride?: string): Promise<{ ok: boolean; message: string }> => {
+      const base = (urlOverride || getServerUrl()).replace(/\/+$/, '');
+      const pingUrl = `${base}/health`;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(pingUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          return { ok: true, message: `Connected to ${base}` };
+        }
+        return { ok: false, message: `Server replied with HTTP ${res.status}` };
+      } catch (err: any) {
+        return { ok: false, message: `Cannot reach server at ${base}: ${err.message || 'Timeout'}` };
+      }
+    },
   },
 
   // Employees

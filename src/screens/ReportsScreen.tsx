@@ -91,8 +91,16 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({ onNavigateToDailyC
               <span className="text-[12px] font-bold text-[#737373] uppercase tracking-wider">
                 Confirmed Net Sales
               </span>
-              <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 text-[11px] font-extrabold flex items-center gap-1 border border-emerald-200">
-                <ArrowUpRight className="w-3.5 h-3.5" /> +14.2% Growth
+              <span className={`px-2.5 py-1 rounded-md text-[11px] font-extrabold flex items-center gap-1 border ${
+                totalSales > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-600 border-gray-200'
+              }`}>
+                {totalSales > 0 ? (
+                  <>
+                    <ArrowUpRight className="w-3.5 h-3.5" /> Live Verified Sales
+                  </>
+                ) : (
+                  <span>Awaiting Transactions</span>
+                )}
               </span>
             </div>
 
