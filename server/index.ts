@@ -5,6 +5,7 @@ import fs from 'fs';
 import cookieParser from 'cookie-parser';
 import { config } from './config';
 import { initWebSocket } from './websocket';
+import { initDb } from './db/pool';
 
 // Routers
 import authRouter from './routes/auth';
@@ -89,9 +90,19 @@ app.use((req, res) => {
   res.status(404).json({ success: false, error: 'NOT_FOUND', message: `Route ${req.method} ${req.path} not found.` });
 });
 
-server.listen(config.port, '0.0.0.0', () => {
-  console.log(`[ServeFlow API Server] Running on http://0.0.0.0:${config.port}`);
-});
+// Initialize DB and launch server
+initDb()
+  .then(() => {
+    server.listen(config.port, '0.0.0.0', () => {
+      console.log(`[ServeFlow API Server] Running on http://0.0.0.0:${config.port}`);
+    });
+  })
+  .catch((err) => {
+    console.error('[ServeFlow DB Startup Error]:', err);
+    server.listen(config.port, '0.0.0.0', () => {
+      console.log(`[ServeFlow API Server] Running on http://0.0.0.0:${config.port} (degraded mode)`);
+    });
+  });
 
 export { app, server };
 

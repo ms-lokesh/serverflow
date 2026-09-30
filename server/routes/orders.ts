@@ -33,6 +33,29 @@ function calculateTotals(items: { price: number; quantity: number }[], gstRate: 
   };
 }
 
+function normalizeOrderItems(rawItems: any[]) {
+  if (!Array.isArray(rawItems)) return [];
+  return rawItems.map((it: any) => {
+    const dish = it.dish || {};
+    const dishId = dish.id || it.dishId || it.id || `dish_${Date.now()}`;
+    const name = dish.name || it.name || 'Menu Item';
+    const price = Number(dish.price ?? it.price ?? 0);
+    const quantity = Math.max(1, Number(it.quantity || 1));
+    const category = dish.category || it.category || 'Mains';
+    const isVeg = dish.isVeg !== undefined ? dish.isVeg : (it.isVeg !== undefined ? it.isVeg : true);
+    const notes = it.notes || dish.notes || null;
+    return {
+      dishId,
+      name,
+      price,
+      quantity,
+      category,
+      isVeg,
+      notes,
+    };
+  });
+}
+
 function buildTimeline(status: string, createdAt: string) {
   const stages = [
     { id: 't-1', title: 'Order Created', key: 'created' },
@@ -206,15 +229,21 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
 router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const restaurantId = req.user!.restaurantId;
-    const { tableNumber, orderType, customerName, customerPhone, pickupTime, notes, items } = req.body;
+    const { tableNumber, orderType, customerName, customerPhone, pickupTime, notes, items: rawItems } = req.body;
 
-    if (!orderType || !items || !Array.isArray(items) || items.length === 0) {
+    if (!orderType || !rawItems || !Array.isArray(rawItems) || rawItems.length === 0) {
+      res.status(400).json({ success: false, error: 'INVALID_ORDER_ITEMS' });
+      return;
+    }
+
+    const items = normalizeOrderItems(rawItems);
+    if (items.length === 0) {
       res.status(400).json({ success: false, error: 'INVALID_ORDER_ITEMS' });
       return;
     }
 
     // Check if any ordered dish is currently marked Stock Out (86)
-    const dishIds = items.map((i: any) => i.dish?.id).filter(Boolean);
+    const dishIds = items.map((i) => i.dishId).filter(Boolean);
     if (dishIds.length > 0) {
       const outOfStock = await query(
         `SELECT id, name FROM dishes WHERE id = ANY($1) AND restaurant_id = $2 AND is_available = FALSE`,
@@ -236,7 +265,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
     const billNumber = `SF-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
 
     const totals = calculateTotals(
-      items.map((i: any) => ({ price: parseFloat(i.dish.price), quantity: i.quantity })),
+      items.map((i) => ({ price: i.price, quantity: i.quantity })),
       5.0
     );
 
@@ -280,13 +309,13 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
           [
             itemId,
             orderId,
-            it.dish.id,
-            it.dish.name,
-            it.dish.price,
+            it.dishId,
+            it.name,
+            it.price,
             it.quantity,
-            it.dish.category,
-            it.dish.isVeg ?? true,
-            it.notes || null,
+            it.category,
+            it.isVeg,
+            it.notes,
           ]
         );
       }
@@ -304,7 +333,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
         await client.query(
           `INSERT INTO kot_ticket_items (id, kot_id, dish_id, name, quantity, notes, is_veg)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [kotItemId, kotId, it.dish.id, it.dish.name, it.quantity, it.notes || null, it.dish.isVeg ?? true]
+          [kotItemId, kotId, it.dishId, it.name, it.quantity, it.notes, it.isVeg]
         );
       }
 
@@ -349,12 +378,12 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
       isAddition: false,
       batchNumber: 1,
       createdAt: new Date().toISOString(),
-      items: items.map((i: any) => ({
-        dishId: i.dish.id,
-        name: i.dish.name,
+      items: items.map((i) => ({
+        dishId: i.dishId,
+        name: i.name,
         quantity: i.quantity,
         notes: i.notes,
-        isVeg: i.dish.isVeg,
+        isVeg: i.isVeg,
       })),
     });
 
@@ -389,15 +418,21 @@ router.post('/:id/items', async (req: AuthenticatedRequest, res: Response): Prom
   try {
     const restaurantId = req.user!.restaurantId;
     const { id: orderId } = req.params;
-    const { additionalItems } = req.body;
+    const { additionalItems: rawAdditionalItems } = req.body;
 
-    if (!additionalItems || !Array.isArray(additionalItems) || additionalItems.length === 0) {
+    if (!rawAdditionalItems || !Array.isArray(rawAdditionalItems) || rawAdditionalItems.length === 0) {
+      res.status(400).json({ success: false, error: 'INVALID_ADDITIONAL_ITEMS' });
+      return;
+    }
+
+    const additionalItems = normalizeOrderItems(rawAdditionalItems);
+    if (additionalItems.length === 0) {
       res.status(400).json({ success: false, error: 'INVALID_ADDITIONAL_ITEMS' });
       return;
     }
 
     // Check if any additional items are marked Stock Out (86)
-    const addDishIds = additionalItems.map((i: any) => i.dish?.id).filter(Boolean);
+    const addDishIds = additionalItems.map((i) => i.dishId).filter(Boolean);
     if (addDishIds.length > 0) {
       const outOfStock = await query(
         `SELECT id, name FROM dishes WHERE id = ANY($1) AND restaurant_id = $2 AND is_available = FALSE`,
@@ -439,14 +474,14 @@ router.post('/:id/items', async (req: AuthenticatedRequest, res: Response): Prom
           [
             itemId,
             orderId,
-            it.dish.id,
-            it.dish.name,
-            it.dish.price,
+            it.dishId,
+            it.name,
+            it.price,
             it.quantity,
-            it.dish.category,
-            it.dish.isVeg ?? true,
+            it.category,
+            it.isVeg,
             nextBatchNumber,
-            it.notes || null,
+            it.notes,
           ]
         );
       }
@@ -493,7 +528,7 @@ router.post('/:id/items', async (req: AuthenticatedRequest, res: Response): Prom
         await client.query(
           `INSERT INTO kot_ticket_items (id, kot_id, dish_id, name, quantity, notes, is_veg)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [kotItemId, kotId, it.dish.id, it.dish.name, it.quantity, it.notes || null, it.dish.isVeg ?? true]
+          [kotItemId, kotId, it.dishId, it.name, it.quantity, it.notes, it.isVeg]
         );
       }
 
@@ -514,12 +549,12 @@ router.post('/:id/items', async (req: AuthenticatedRequest, res: Response): Prom
       status: 'new',
       isAddition: true,
       createdAt: new Date().toISOString(),
-      items: additionalItems.map((i: any) => ({
-        dishId: i.dish.id,
-        name: i.dish.name,
+      items: additionalItems.map((i) => ({
+        dishId: i.dishId,
+        name: i.name,
         quantity: i.quantity,
         notes: i.notes,
-        isVeg: i.dish.isVeg,
+        isVeg: i.isVeg,
       })),
     });
 

@@ -332,6 +332,38 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
     );
 
+    // DISH_ADDED event
+    unsubs.push(
+      wsClient.on('DISH_ADDED', (data) => {
+        if (data?.dish) {
+          setDishes((prev) => {
+            if (prev.some((d) => d.id === data.dish.id)) return prev;
+            return [...prev, data.dish];
+          });
+        }
+      })
+    );
+
+    // DISH_UPDATED event
+    unsubs.push(
+      wsClient.on('DISH_UPDATED', (data) => {
+        if (data?.dish) {
+          setDishes((prev) =>
+            prev.map((d) => (d.id === data.dish.id ? { ...d, ...data.dish } : d))
+          );
+        }
+      })
+    );
+
+    // DISH_DELETED event
+    unsubs.push(
+      wsClient.on('DISH_DELETED', (data) => {
+        if (data?.dishId) {
+          setDishes((prev) => prev.filter((d) => d.id !== data.dishId));
+        }
+      })
+    );
+
     // PAYMENT_SUBMITTED event
     unsubs.push(
       wsClient.on('PAYMENT_SUBMITTED', (data) => {
@@ -633,17 +665,31 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     ticketId: string,
     status: 'new' | 'preparing' | 'ready' | 'served'
   ) => {
+    const nowIso = new Date().toISOString();
+    setKitchenTickets((prev) =>
+      prev.map((k) =>
+        k.id === ticketId
+          ? {
+              ...k,
+              status,
+              acceptedAt: status === 'preparing' ? (k.acceptedAt || nowIso) : k.acceptedAt,
+              readyAt: status === 'ready' ? (k.readyAt || nowIso) : k.readyAt,
+              servedAt: status === 'served' ? (k.servedAt || nowIso) : k.servedAt,
+            }
+          : k
+      )
+    );
+
     api.kot
       .updateStatus(ticketId, status)
       .then((res) => {
-        if (res.success) {
-          setKitchenTickets((prev) =>
-            prev.map((k) => (k.id === ticketId ? { ...k, status } : k))
-          );
+        if (!res.success) {
+          refreshAllData();
         }
       })
       .catch((err) => {
         showToast(err.message || 'Failed to update KOT', 'error');
+        refreshAllData();
       });
   };
 
@@ -655,22 +701,71 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setRestaurantConfig((prev) => ({ ...prev, ...config }));
   };
 
-  const saveDish = (dish: Partial<Dish> & { name: string; price: number; category: string }) => {
-    if (dish.id) {
-      api.menu.update(dish.id, dish).then(() => refreshAllData());
-    } else {
-      api.menu.create(dish).then(() => refreshAllData());
+  const saveDish = async (dish: Partial<Dish> & { name: string; price: number; category: string }) => {
+    try {
+      if (dish.id) {
+        // Optimistic update
+        setDishes((prev) =>
+          prev.map((d) => (d.id === dish.id ? ({ ...d, ...dish } as Dish) : d))
+        );
+        const res = await api.menu.update(dish.id, dish);
+        if (res.success && res.data) {
+          setDishes((prev) =>
+            prev.map((d) => (d.id === dish.id ? { ...d, ...res.data } : d))
+          );
+        }
+        showToast(`Dish "${dish.name}" updated successfully.`, 'success');
+      } else {
+        const res = await api.menu.create(dish);
+        if (res.success && res.data) {
+          setDishes((prev) => {
+            if (prev.some((d) => d.id === res.data.id)) return prev;
+            return [...prev, res.data];
+          });
+        }
+        showToast(`New dish "${dish.name}" added to menu!`, 'success');
+      }
+      await refreshAllData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save dish.', 'error');
+      await refreshAllData();
     }
   };
 
   const addDish = saveDish;
 
-  const updateDishPrice = (dishId: string, newPrice: number) => {
-    api.menu.update(dishId, { price: newPrice }).then(() => refreshAllData());
+  const updateDishPrice = async (dishId: string, newPrice: number) => {
+    setDishes((prev) =>
+      prev.map((d) => (d.id === dishId ? { ...d, price: newPrice } : d))
+    );
+    try {
+      await api.menu.update(dishId, { price: newPrice });
+      showToast('Price updated successfully.', 'success');
+      await refreshAllData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update price.', 'error');
+      await refreshAllData();
+    }
   };
 
-  const deleteDish = (dishId: string) => {
-    showToast('Menu item updated.', 'info');
+  const deleteDish = async (dishId: string) => {
+    const dishToDelete = dishes.find((d) => d.id === dishId);
+    const dishName = dishToDelete ? dishToDelete.name : 'Item';
+
+    // Optimistic removal
+    const previousDishes = dishes;
+    setDishes((prev) => prev.filter((d) => d.id !== dishId));
+
+    try {
+      const res = await api.menu.delete(dishId);
+      showToast(res.message || `Dish "${dishName}" removed from menu.`, 'success');
+      await refreshAllData();
+    } catch (err: any) {
+      // Revert if failed
+      setDishes(previousDishes);
+      showToast(err.message || `Failed to delete "${dishName}".`, 'error');
+      await refreshAllData();
+    }
   };
 
   const toggleDishAvailability = async (dishId: string) => {

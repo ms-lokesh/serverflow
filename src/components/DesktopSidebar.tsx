@@ -104,6 +104,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               badge: billRequestedCount > 0 ? billRequestedCount : undefined,
               badgeColor: 'bg-amber-500',
             },
+            {
+              id: 'kitchen',
+              label: 'Live KDS Board',
+              icon: ChefHat,
+              badge: kitchenActiveCount > 0 ? kitchenActiveCount : undefined,
+              badgeColor: 'bg-orange-500',
+            },
             { id: 'takeaway', label: 'Takeaway Counter', icon: ShoppingBag },
             {
               id: 'payments',
@@ -138,6 +145,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               icon: LayoutGrid,
               badge: billRequestedCount > 0 ? billRequestedCount : undefined,
               badgeColor: 'bg-amber-500',
+            },
+            {
+              id: 'kitchen',
+              label: 'Live KDS Board',
+              icon: ChefHat,
+              badge: kitchenActiveCount > 0 ? kitchenActiveCount : undefined,
+              badgeColor: 'bg-orange-500',
             },
             { id: 'takeaway', label: 'Takeaway Counter', icon: ShoppingBag },
             { id: 'orders', label: 'My Orders', icon: ClipboardList },

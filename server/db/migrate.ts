@@ -1,19 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { query, pool } from './pool';
+import { query, pool, exec } from './pool';
 import { hashPassword } from '../utils/auth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function migrate() {
+export async function runMigration() {
   console.log('[Migration] Starting ServeFlow Database Migration...');
 
   // 1. Run Schema DDL
   const schemaPath = path.resolve(__dirname, 'schema.sql');
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-  await query(schemaSql);
+  await exec(schemaSql);
   console.log('[Migration] Schema tables created successfully.');
 
   // 2. Seed Permissions
@@ -150,6 +150,16 @@ async function migrate() {
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
     },
     {
+      id: 'usr_admin_02',
+      employeeId: 'ADM-002',
+      name: 'System Admin',
+      email: 'admin@example.com',
+      phone: '+91 98765 43210',
+      role: 'ADMIN',
+      password: 'admin123',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    },
+    {
       id: 'usr_dining_01',
       employeeId: 'DIN-001',
       name: 'Arun Kumar',
@@ -247,10 +257,25 @@ async function migrate() {
   );
 
   console.log('[Migration] Completed successfully!');
-  await pool.end();
 }
 
-migrate().catch((err) => {
-  console.error('[Migration Failed]:', err);
-  process.exit(1);
-});
+export const migrate = runMigration;
+
+// If executed directly from command line (e.g., npm run db:migrate)
+const isDirectExecution = process.argv[1] && (
+  process.argv[1].endsWith('migrate.ts') || 
+  process.argv[1].endsWith('migrate.js')
+);
+
+if (isDirectExecution) {
+  runMigration()
+    .then(async () => {
+      await pool.end();
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('[Migration Failed]:', err);
+      process.exit(1);
+    });
+}
+

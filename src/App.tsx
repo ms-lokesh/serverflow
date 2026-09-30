@@ -64,8 +64,15 @@ const MainApp: React.FC = () => {
   const [isViewingClosing, setIsViewingClosing] = useState<boolean>(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
 
-  // Set default persona tab upon authentication
+  // Set default persona tab upon authentication or role switch
   useEffect(() => {
+    setSelectedTable(null);
+    setSelectedOrder(null);
+    setIsCreatingOrder(false);
+    setIsAddingItems(false);
+    setIsViewingBill(false);
+    setIsCollectingPayment(false);
+    setIsViewingClosing(false);
     if (role === 'admin') setActiveTab('home');
     else if (role === 'dining') setActiveTab('tables');
     else if (role === 'kitchen') setActiveTab('kitchen');
@@ -98,9 +105,7 @@ const MainApp: React.FC = () => {
 
   const handleOrderCreated = () => {
     setIsCreatingOrder(false);
-    const tableNum = selectedTable?.number;
-    const updatedTable = tables.find((t) => t.number === tableNum) || selectedTable;
-    setSelectedTable(updatedTable || null);
+    setSelectedTable(null);
   };
 
   const handleOpenAddItems = (order: Order) => {
@@ -147,6 +152,12 @@ const MainApp: React.FC = () => {
   };
 
   const renderMainContent = () => {
+    // 1. Kitchen KDS Board: Always render KitchenScreen immediately when activeTab is 'kitchen'!
+    // Under no circumstances should dining table detail or other subviews hijack the kitchen screen.
+    if (activeTab === 'kitchen') {
+      return <KitchenScreen />;
+    }
+
     if (isAddingItems && selectedOrder) {
       return (
         <AddItemsScreen
@@ -197,7 +208,8 @@ const MainApp: React.FC = () => {
       return <DailyClosingScreen onBack={() => setIsViewingClosing(false)} />;
     }
 
-    if (selectedTable) {
+    // Only render TableDetailScreen if activeTab is 'tables' or 'home'
+    if (selectedTable && (activeTab === 'tables' || activeTab === 'home')) {
       return (
         <TableDetailScreen
           table={selectedTable}
@@ -206,6 +218,10 @@ const MainApp: React.FC = () => {
           onViewBill={handleOpenBilling}
           onCollectPayment={handleOpenPayment}
           onReviewPayment={handleReviewPayment}
+          onNavigateToKitchen={() => {
+            setSelectedTable(null);
+            setActiveTab('kitchen');
+          }}
         />
       );
     }
@@ -237,6 +253,8 @@ const MainApp: React.FC = () => {
               onCreateOrderForTable={handleCreateOrderForTable}
             />
           );
+        case 'kitchen':
+          return <KitchenScreen />;
         case 'takeaway':
           return (
             <TakeawayScreen
@@ -307,6 +325,8 @@ const MainApp: React.FC = () => {
               onCreateOrderForTable={handleCreateOrderForTable}
             />
           );
+        case 'kitchen':
+          return <KitchenScreen />;
         case 'takeaway':
           return (
             <TakeawayScreen
@@ -388,12 +408,13 @@ const MainApp: React.FC = () => {
   };
 
   const isSubflowActive =
-    (isAddingItems && selectedOrder !== null) ||
-    (isCreatingOrder && selectedTable !== null) ||
-    (isCollectingPayment && selectedOrder !== null) ||
-    (isViewingBill && selectedOrder !== null) ||
-    isViewingClosing ||
-    selectedTable !== null;
+    activeTab !== 'kitchen' &&
+    ((isAddingItems && selectedOrder !== null) ||
+      (isCreatingOrder && selectedTable !== null) ||
+      (isCollectingPayment && selectedOrder !== null) ||
+      (isViewingBill && selectedOrder !== null) ||
+      isViewingClosing ||
+      (selectedTable !== null && (activeTab === 'tables' || activeTab === 'home')));
 
   return (
     <div className="min-h-screen bg-[#F8F8F6] text-[#242424] flex lg:flex-row flex-col font-sans selection:bg-[#C94B4B]/20 selection:text-[#C94B4B]">

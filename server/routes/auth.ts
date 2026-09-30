@@ -7,6 +7,7 @@ import {
   clearAuthCookies,
   sanitizeUser,
   verifyRefreshToken,
+  verifyAccessToken,
 } from '../utils/auth';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { logAudit } from '../services/audit';

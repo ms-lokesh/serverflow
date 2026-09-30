@@ -50,6 +50,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           { id: 'home', label: 'Dashboard', icon: Home },
           { id: 'tables', label: 'Tables', icon: LayoutGrid, badge: billRequestedCount > 0 ? billRequestedCount : undefined },
           {
+            id: 'kitchen',
+            label: 'KDS Live',
+            icon: ChefHat,
+            badge: kitchenNewCount > 0 ? kitchenNewCount : undefined,
+          },
+          {
             id: 'payments',
             label: 'Payments',
             icon: CircleDollarSign,
@@ -62,6 +68,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       case 'dining':
         return [
           { id: 'tables', label: 'Tables', icon: LayoutGrid, badge: billRequestedCount > 0 ? billRequestedCount : undefined },
+          {
+            id: 'kitchen',
+            label: 'KDS Live',
+            icon: ChefHat,
+            badge: kitchenNewCount > 0 ? kitchenNewCount : undefined,
+          },
           { id: 'takeaway', label: 'Takeaway', icon: ShoppingBag },
           { id: 'orders', label: 'Orders', icon: ClipboardList },
           { id: 'profile', label: 'Staff', icon: MoreHorizontal },

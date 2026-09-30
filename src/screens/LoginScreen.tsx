@@ -12,11 +12,11 @@ export const LoginScreen: React.FC = () => {
 
   // Server URL settings
   const [showServerConfig, setShowServerConfig] = useState(false);
-  const [serverAddress, setServerAddress] = useState(getServerUrl() || 'http://192.168.161.0:4000');
+  const [serverAddress, setServerAddress] = useState(getServerUrl() || 'http://localhost:4000');
   const [pingStatus, setPingStatus] = useState<{ testing: boolean; success?: boolean; message?: string } | null>(null);
 
   useEffect(() => {
-    setServerAddress(getServerUrl() || 'http://192.168.161.0:4000');
+    setServerAddress(getServerUrl() || 'http://localhost:4000');
   }, []);
 
   const handleTestConnection = async () => {
@@ -29,6 +29,12 @@ export const LoginScreen: React.FC = () => {
     setServerUrl(serverAddress);
     setShowServerConfig(false);
     setPingStatus(null);
+  };
+
+  const handleResetServer = () => {
+    setServerUrl('');
+    setServerAddress('http://localhost:4000');
+    setPingStatus({ testing: false, success: true, message: 'Reset to default localhost:4000' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,6 +166,63 @@ export const LoginScreen: React.FC = () => {
             </button>
           </form>
 
+          {/* Quick Demo Credentials Autofill */}
+          <div className="mt-4 pt-3.5 border-t border-[#EFEFEA]">
+            <div className="text-[11px] font-bold text-[#888] uppercase tracking-wider mb-2 text-center">
+              Quick Demo Logins (Tap to autofill)
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIdentifier('ADM-001');
+                  setPassword('admin123');
+                  if (displayError) setLocalError(null);
+                }}
+                className="p-2.5 rounded-xl border border-red-200 bg-red-50/70 hover:bg-red-100/80 text-left transition-all cursor-pointer active:scale-98"
+              >
+                <div className="text-[12px] font-bold text-red-700">Admin</div>
+                <div className="text-[10.5px] text-red-600 font-mono">ADM-001 / admin123</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIdentifier('DIN-001');
+                  setPassword('dining123');
+                  if (displayError) setLocalError(null);
+                }}
+                className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/80 text-left transition-all cursor-pointer active:scale-98"
+              >
+                <div className="text-[12px] font-bold text-blue-700">Dining Floor</div>
+                <div className="text-[10.5px] text-blue-600 font-mono">DIN-001 / dining123</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIdentifier('KIT-001');
+                  setPassword('kitchen123');
+                  if (displayError) setLocalError(null);
+                }}
+                className="p-2.5 rounded-xl border border-orange-200 bg-orange-50/70 hover:bg-orange-100/80 text-left transition-all cursor-pointer active:scale-98"
+              >
+                <div className="text-[12px] font-bold text-orange-700">Kitchen KDS</div>
+                <div className="text-[10.5px] text-orange-600 font-mono">KIT-001 / kitchen123</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIdentifier('TAK-001');
+                  setPassword('takeaway123');
+                  if (displayError) setLocalError(null);
+                }}
+                className="p-2.5 rounded-xl border border-green-200 bg-green-50/70 hover:bg-green-100/80 text-left transition-all cursor-pointer active:scale-98"
+              >
+                <div className="text-[12px] font-bold text-green-700">Takeaway</div>
+                <div className="text-[10.5px] text-green-600 font-mono">TAK-001 / takeaway123</div>
+              </button>
+            </div>
+          </div>
+
           {/* Server Config Collapsible / Modal */}
           {showServerConfig ? (
             <div className="mt-4 p-4 rounded-2xl bg-[#F8F8F6] border border-[#E8E6E3] animate-in fade-in duration-150">
@@ -180,11 +243,11 @@ export const LoginScreen: React.FC = () => {
                 type="text"
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
-                placeholder="http://192.168.161.0:4000"
+                placeholder="http://localhost:4000"
                 className="w-full px-3 py-2 text-[13px] font-mono rounded-lg border border-[#DDD] bg-white text-[#333] focus:outline-none focus:border-[#C94B4B]"
               />
               <p className="text-[11px] text-[#777] mt-1.5 leading-snug">
-                Enter your computer's IP address with port 4000. Both devices must be on the same Wi-Fi.
+                Local PC: <code className="font-mono text-[10.5px] bg-gray-200 px-1 rounded">http://localhost:4000</code>. For mobile devices on Wi-Fi, use your PC's Wi-Fi IP with port 4000.
               </p>
 
               {pingStatus && (
@@ -207,15 +270,23 @@ export const LoginScreen: React.FC = () => {
                   type="button"
                   onClick={handleTestConnection}
                   disabled={pingStatus?.testing}
-                  className="flex-1 py-2 px-3 rounded-lg border border-[#DDD] bg-white text-[#444] text-[12px] font-bold hover:bg-[#F0F0EE] flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 px-2.5 rounded-lg border border-[#DDD] bg-white text-[#444] text-[11.5px] font-bold hover:bg-[#F0F0EE] flex items-center justify-center gap-1 cursor-pointer"
                 >
                   {pingStatus?.testing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                  Test Connection
+                  Test
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetServer}
+                  className="py-2 px-2.5 rounded-lg border border-[#DDD] bg-white text-[#666] text-[11.5px] font-bold hover:bg-[#F0F0EE] cursor-pointer"
+                  title="Reset to localhost"
+                >
+                  Reset
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveServer}
-                  className="flex-1 py-2 px-3 rounded-lg bg-[#242424] text-white text-[12px] font-bold hover:bg-[#333]"
+                  className="flex-1 py-2 px-2.5 rounded-lg bg-[#242424] text-white text-[11.5px] font-bold hover:bg-[#333] cursor-pointer"
                 >
                   Save URL
                 </button>
@@ -224,7 +295,7 @@ export const LoginScreen: React.FC = () => {
           ) : (
             <div className="mt-4 pt-3 border-t border-[#F5F5F3] flex items-center justify-between text-[11.5px] text-[#737373]">
               <span className="truncate max-w-[210px] font-mono text-[11px]">
-                Server: {getServerUrl() || 'http://192.168.161.0:4000'}
+                Server: {getServerUrl() || 'http://localhost:4000 (Default)'}
               </span>
               <button
                 type="button"

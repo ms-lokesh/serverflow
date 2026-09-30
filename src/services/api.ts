@@ -24,7 +24,15 @@ export class ApiError extends Error {
 export function getServerUrl(): string {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('serveflow_server_url');
-    if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
+    if (saved && saved.trim()) {
+      const clean = saved.trim().replace(/\/+$/, '');
+      // Automatically clear invalid/placeholder IP ending in .0 (network address)
+      if (clean.includes('192.168.161.0') || clean.endsWith('.0:4000') || clean.endsWith('.0')) {
+        localStorage.removeItem('serveflow_server_url');
+      } else {
+        return clean;
+      }
+    }
 
     const envUrl = (import.meta as any).env?.VITE_API_URL;
     if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '');
@@ -36,7 +44,7 @@ export function getServerUrl(): string {
       (window.location.hostname === 'localhost' && window.location.port !== '4000' && window.location.port !== '3000');
 
     if (isCapacitor) {
-      return 'http://192.168.161.0:4000';
+      return 'http://10.0.2.2:4000';
     }
   }
   return '';
@@ -217,6 +225,10 @@ export const api = {
       request<ApiResponse<any>>(`/api/menu/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<ApiResponse<{ dishId: string }>>(`/api/menu/${id}`, {
+        method: 'DELETE',
       }),
     toggleAvailability: (id: string) =>
       request<ApiResponse<{ isAvailable: boolean }>>(`/api/menu/${id}/toggle`, {

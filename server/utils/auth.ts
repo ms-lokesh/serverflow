@@ -15,7 +15,7 @@ export interface TokenPayload {
  */
 export async function hashPassword(password: string): Promise<string> {
   return await hash(password, {
-    algorithm: Algorithm.Argon2id,
+    algorithm: 2, // Algorithm.Argon2id
     memoryCost: 19456,
     timeCost: 2,
     outputLen: 32,

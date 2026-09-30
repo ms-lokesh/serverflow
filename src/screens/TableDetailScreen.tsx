@@ -13,6 +13,7 @@ import {
   Printer,
   ChevronRight,
   Info,
+  ChefHat,
 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Order, Table, TimelineEvent } from '../types';
@@ -24,6 +25,7 @@ interface TableDetailScreenProps {
   onViewBill: (order: Order) => void;
   onCollectPayment: (order: Order) => void;
   onReviewPayment: (order: Order) => void;
+  onNavigateToKitchen?: () => void;
 }
 
 export const TableDetailScreen: React.FC<TableDetailScreenProps> = ({
@@ -33,6 +35,7 @@ export const TableDetailScreen: React.FC<TableDetailScreenProps> = ({
   onViewBill,
   onCollectPayment,
   onReviewPayment,
+  onNavigateToKitchen,
 }) => {
   const { getOrderById, currentUser, printReceipt, tables, kitchenTickets } = useRestaurant();
 
@@ -370,6 +373,16 @@ export const TableDetailScreen: React.FC<TableDetailScreenProps> = ({
                   <Receipt className="w-4 h-4 text-[#555]" />
                   <span>View / Print Bill</span>
                 </button>
+
+                {onNavigateToKitchen && (
+                  <button
+                    onClick={onNavigateToKitchen}
+                    className="w-full py-3 px-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 font-bold text-[13.5px] flex items-center justify-center gap-2 hover:bg-amber-100 hover:border-amber-300 active:scale-98 transition-all cursor-pointer"
+                  >
+                    <ChefHat className="w-4 h-4 text-amber-700" />
+                    <span>View in Kitchen (KDS)</span>
+                  </button>
+                )}
 
                 {order.status === 'payment_submitted' ? (
                   currentUser.role === 'admin' ? (
